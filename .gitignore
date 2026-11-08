@@ -11,7 +11,7 @@ engine/
 *.log
 *.lnk
 *.png
-!docs/assets/review-demo.png
+!docs/assets/review-demo.jpg
 *.jpg
 *.zip
 *.bin

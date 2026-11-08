@@ -2,7 +2,7 @@
 
 一个中文、轻量的 **KataGo 本地围棋复盘工具**。浏览器显示棋盘，Python 服务调用电脑上的 KataGo；配置完成后，日常复盘无需上传棋谱或连接云端分析服务。
 
-![弈镜真实界面：中文棋盘、KataGo 推荐落点、胜率曲线与稳定后自动暂停](docs/assets/review-demo.png)
+![弈镜真实界面：中文棋盘、KataGo 推荐落点、胜率曲线与稳定后自动暂停](docs/assets/review-demo.jpg)
 
 *使用内置示例棋局截取，展示真实本机 KataGo 分析结果。*
 

@@ -11,7 +11,6 @@ engine/
 *.log
 *.lnk
 *.png
-!docs/assets/review-demo.jpg
 *.jpg
 *.zip
 *.bin
@@ -27,3 +26,6 @@ __pycache__/
 !.env.example
 .pytest_cache/
 .DS_Store
+
+# Public project screenshot only
+!docs/assets/review-demo.jpg

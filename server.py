@@ -268,8 +268,8 @@ class Handler(BaseHTTPRequestHandler):
                 id=p.split('/')[-1]
                 if not re.fullmatch('[a-f0-9]{32}',id):raise ValueError('无效棋谱编号')
                 return self.json(replay(normalize_saved(json.loads((LIB/(id+'.json')).read_text('utf-8')))))
-            if p not in ('/','/app.js','/style.css'):return self.send_error(404)
-            f=ROOT/'web'/('index.html' if p=='/' else p[1:]);raw=f.read_bytes();self.send_response(200);self.send_header('Content-Type',{'html':'text/html; charset=utf-8','js':'text/javascript; charset=utf-8','css':'text/css; charset=utf-8'}[f.suffix[1:]]);self.send_header('Cache-Control','no-store');self.send_header('Content-Length',str(len(raw)));self.end_headers();self.wfile.write(raw)
+            if p not in ('/','/app.js','/style.css','/terrain.js','/terrain.html','/terrain-companion.js','/vendor/three.module.js','/vendor/OrbitControls.js','/vendor/THREE-LICENSE.txt'):return self.send_error(404)
+            f=ROOT/'web'/('index.html' if p=='/' else p[1:]);raw=f.read_bytes();self.send_response(200);self.send_header('Content-Type',{'html':'text/html; charset=utf-8','js':'text/javascript; charset=utf-8','css':'text/css; charset=utf-8','txt':'text/plain; charset=utf-8'}[f.suffix[1:]]);self.send_header('Cache-Control','no-store');self.send_header('Content-Length',str(len(raw)));self.end_headers();self.wfile.write(raw)
         except (ValueError,KeyError,FileNotFoundError) as e:self.json({'error':str(e)},400)
     def do_POST(self):
         try:

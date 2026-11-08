@@ -1,5 +1,6 @@
 'use strict';
 const $=id=>document.getElementById(id), cols='ABCDEFGHJKLMNOPQRST';
+let boardView='2d',terrainView=null,terrainLoading=null;
 let editing=false,game=null,turn=0,branch=null,branchMode=false,pv=null,job=null,busy=false,saveTimer,toastTimer,pollTimer;
 let playQueue=Promise.resolve(),autoTimer,autoGeneration=0,trialOrigin=null,branchSession=0;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -24,7 +25,7 @@ let last=pv?(pv.step?pv.moves[pv.step-1]:null):g?.moves[turn-1];if(last&&last[1]
 function losses(){if(!game)return [];return game.moves.map((m,i)=>{let a=game.analysis[i]?.rootInfo,b=game.analysis[i+1]?.rootInfo;if(!a||!b)return null;const loss=(a.scoreLead-b.scoreLead)*(m[0]==='B'?1:-1);return {turn:i+1,loss,move:m}}).filter(x=>x&&x.loss>=1).sort((a,b)=>b.loss-a.loss)}
 function drawChart(){const c=$('chart'),r=c.getBoundingClientRect(),dpr=devicePixelRatio||1;c.width=Math.round(r.width*dpr);c.height=145*dpr;const ctx=c.getContext('2d');ctx.scale(dpr,dpr);const w=r.width,h=145,p=24,N=game?.moves.length||1,xx=t=>p+(w-2*p)*t/Math.max(1,N),yy=v=>12+(1-v)*(h-35);ctx.clearRect(0,0,w,h);ctx.font='9px system-ui';ctx.textAlign='left';[0,.5,1].forEach(v=>{ctx.strokeStyle='#e8eae3';ctx.setLineDash(v===.5?[4,4]:[]);ctx.beginPath();ctx.moveTo(p,yy(v));ctx.lineTo(w-p,yy(v));ctx.stroke();ctx.fillStyle='#9ca491';ctx.fillText(Math.round(v*100)+'',0,yy(v)+3)});ctx.setLineDash([]);if(game){let prev=null;ctx.strokeStyle='#427c60';ctx.lineWidth=2;for(let t=0;t<=N;t++){const a=game.analysis[t];if(!a){prev=null;continue}const v=a.rootInfo.winrate;ctx.beginPath();if(prev)ctx.moveTo(xx(t-1),yy(prev));else ctx.moveTo(xx(t),yy(v));ctx.lineTo(xx(t),yy(v));ctx.stroke();ctx.beginPath();ctx.arc(xx(t),yy(v),2,0,7);ctx.fillStyle='#427c60';ctx.fill();prev=v}for(const l of losses().filter(x=>x.loss>=3)){const a=game.analysis[l.turn];ctx.beginPath();ctx.arc(xx(l.turn),yy(a.rootInfo.winrate),3,0,7);ctx.fillStyle='#c57c54';ctx.fill()}ctx.strokeStyle='#9aad96';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(xx(Math.min(turn,N)),8);ctx.lineTo(xx(Math.min(turn,N)),h-20);ctx.stroke()}ctx.fillStyle='#9ca491';ctx.textAlign='center';for(let t=0;t<=N;t+=Math.max(1,Math.ceil(N/6)))ctx.fillText(t,xx(t),h-3)}
 function render(){const g=active(),a=g?.analysis?.[turn];if(game)$('progress').textContent=`已分析 ${Object.keys(game.analysis).length} / ${game.moves.length+1} 个局面`;$('title').textContent=game?.title||'开始你的下一次进步';$('blackName').textContent=game?.black||'黑方';$('whiteName').textContent=game?.white||'白方';$('gameInfo').textContent=`${g?.size||19} 路 · ${g?.rules==='japanese'?'日本':'中国'}规则 · 贴 ${g?.komi??7.5} 目`;$('slider').max=g?.moves.length||0;$('slider').value=turn;$('turn').textContent=`${branch?'试下 · ':''}第 ${turn} / ${g?.moves.length||0} 手`;$('branch').classList.toggle('active',branchMode);$('branch').textContent=branchMode?'结束试下':'试下模式';$('return').hidden=!branchMode&&!branch;$('saveBranch').hidden=!branch;$('pvPanel').hidden=!pv;if(pv)$('pvStep').textContent=`变化 ${pv.step} / ${pv.moves.length} 手`;$('win').innerHTML=a?`${(a.rootInfo.winrate*100).toFixed(1)}<i>%</i>`:'—';$('score').innerHTML=a?`${a.rootInfo.scoreLead>=0?'黑':'白'} +${Math.abs(a.rootInfo.scoreLead).toFixed(1)}<i>目</i>`:'—';$('winbar').style.width=`${a?a.rootInfo.winrate*100:50}%`;$('visitsLabel').textContent=a?`${a.rootInfo.visits} 次搜索`:'等待分析';$('comment').textContent=game?.comments?.[turn]||'此处暂无评注。';$('moves').innerHTML=a?a.moveInfos.slice(0,5).map((m,i)=>`<button class="move-item" data-move="${i}"><span class="move-rank">${i+1}</span><b>${m.move==='pass'?'停着':esc(m.move)}</b><small>黑胜 ${(m.winrate*100).toFixed(1)}%<br>${m.scoreLead>=0?'黑':'白'}领先 ${Math.abs(m.scoreLead).toFixed(1)} 目</small><small class="right">${m.visits}<br>次搜索</small></button>`).join(''):'<p class="empty">分析后查看候选点。<br>点击候选点可预览后续变化。</p>';document.querySelectorAll('[data-move]').forEach(el=>el.onclick=safe(()=>preview(a.moveInfos[Number(el.dataset.move)])));
-const ls=losses();$('mistakes').innerHTML=ls.length?ls.slice(0,12).map(l=>`<button class="mistake" data-turn="${l.turn}"><b>${l.turn} 手 · ${l.move[0]==='B'?'黑':'白'} ${esc(l.move[1])}</b><span>损失 ${l.loss.toFixed(1)} 目 ›</span></button>`).join(''):'<p class="empty">整局分析后自动发现转折点。</p>';document.querySelectorAll('[data-turn]').forEach(el=>el.onclick=safe(async()=>{if(branchMode||branch)await exitTrial(false);goto(Number(el.dataset.turn)-1);toast(`已定位到第 ${el.dataset.turn} 手落子前，可查看 AI 推荐`) }));drawBoard();drawChart()}
+const ls=losses();$('mistakes').innerHTML=ls.length?ls.slice(0,12).map(l=>`<button class="mistake" data-turn="${l.turn}"><b>${l.turn} 手 · ${l.move[0]==='B'?'黑':'白'} ${esc(l.move[1])}</b><span>损失 ${l.loss.toFixed(1)} 目 ›</span></button>`).join(''):'<p class="empty">整局分析后自动发现转折点。</p>';document.querySelectorAll('[data-turn]').forEach(el=>el.onclick=safe(async()=>{if(branchMode||branch)await exitTrial(false);goto(Number(el.dataset.turn)-1);toast(`已定位到第 ${el.dataset.turn} 手落子前，可查看 AI 推荐`) }));drawBoard();drawChart();renderTerrain()}
 async function preview(m){const g=active(),start=currentPlayer(g,turn);let c=start;const moves=m.pv.map(p=>{let a=[c,p];c=c==='B'?'W':'B';return a});const d=await api('replay',{...g,moves:[...g.moves.slice(0,turn),...moves],analysis:{}});pv={moves,positions:d.positions.slice(turn),step:1};render()}
 function play(m){const session=branchSession;const pending=playQueue.then(()=>session===branchSession?playMove(m):undefined);playQueue=pending.catch(()=>{});return pending}
 async function playMove(m){if(pv){toast('请先关闭变化预览');return}if(!game){await createGame(19,'chinese',7.5);branchMode=true}if(!branchMode){toast('请先点击「试下模式」再落子');return}const session=branchSession,g=active(),color=currentPlayer(g,turn),moves=[...g.moves.slice(0,turn),[color,m]],analysis=Object.fromEntries(Object.entries(g.analysis||{}).filter(([t])=>Number(t)<=turn));const d=await api('replay',{...g,moves,analysis,comments:{}});if(session!==branchSession||!branchMode)return;if(editing){game=d;scheduleSave()}else branch=d;turn=moves.length;render();if($('autoAnalysis').checked)await analyze(false,true)}
@@ -48,3 +49,25 @@ async function status(){try{const d=await api('status');$('status').textContent=
 $('saveBranch').onclick=safe(async()=>{await cancel();const d={...branch,title:game.title+' · 试下',id:undefined};load(d);await save(false);toast('试下已另存为新棋谱')});
 
 $('autoAnalysis').onchange=safe(async()=>{if($('autoAnalysis').checked)scheduleAuto();else if(job?.auto){await cancel();$('task').textContent='自动分析已暂停'}});
+
+async function setBoardView(view){
+  boardView=view;
+  $('view2d').setAttribute('aria-pressed',String(view==='2d'));
+  $('view3d').setAttribute('aria-pressed',String(view==='3d'));
+  $('board').hidden=view==='3d';$('terrainHost').hidden=view!=='3d';
+  if(view==='3d'&&!terrainView){
+    try{
+      terrainLoading??=import('/terrain.js');
+      const {GoTerrain}=await terrainLoading;
+      terrainView??=new GoTerrain($('terrainHost'),{onPlay:m=>safe(()=>play(m))()});
+    }catch(e){terrainLoading=null;toast('3D 视图无法启动：'+e.message);await setBoardView('2d');return}
+  }
+  terrainView?.setVisible(boardView==='3d');renderTerrain();
+}
+function renderTerrain(){
+  if(!terrainView||boardView!=='3d')return;
+  const g=active();if(!g)return;
+  const result=pv?null:g.analysis?.[turn];
+  terrainView.update({size:g.size,stones:pv?pv.positions[pv.step]:g.positions[turn],ownership:result?.ownership,turn:pv?turn+pv.step:turn,visits:result?.rootInfo?.visits,message:pv?'AI 变化预览 · 此变化局面尚未分析，暂不显示地形':undefined});
+}
+$('view2d').onclick=()=>setBoardView('2d');$('view3d').onclick=()=>setBoardView('3d');

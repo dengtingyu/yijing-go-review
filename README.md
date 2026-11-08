@@ -16,6 +16,8 @@
 - 每个持续分析任务另有 **20,000 次搜索或 60 秒**上限，换手后继续分析。
 - 试下结束后返回进入试下前的原谱位置；支持变化预览、前进 5 手、停一手。
 - 兼容 9 / 13 / 19 路、让子、中文编码，以及野狐 SGF 的特殊贴目值。
+- 普通棋盘 / **3D 形势**切换：半透明黑白归属地形，支持旋转、缩放与平移；换手、试下和分析结果自动同步，边缘平滑收坡。
+- **Lizzie / LizzieYzy 联动扩展**：与原 GUI 共用 KataGo，在独立浏览器窗口显示 3D 形势；提供可恢复的 LizzieYzy 配置安装器。
 - 本地棋谱库，保留复盘结果；旧页面保存时保留同一棋局更完整的分析。
 
 ## 快速开始：Windows x64
@@ -48,10 +50,23 @@ python setup_engine.py --engine-zip "C:\Downloads\katago-v1.18.1-opencl-windows-
 3. 点击「试下模式」，尝试自己的下法；点「结束试下」或「返回原谱」回到进入前的位置。
 4. 点击 AI 候选点预览变化，用左右键逐步查看，或点「＋5 手」。
 5. 自动分析会在稳定或达到上限时暂停。点击「停止」会关闭自动模式；重新勾选「自动持续分析」即可继续。
+6. 棋盘上方切换「3D 形势」，拖动旋转、滚轮缩放、右键平移。没有当前局面的分析时只显示棋盘，AI 变化预览也不会套用原局面地形。
+
+3D 高度是 AI 对最终归属的倾向强度，不是胜率或传统外势。空间平滑和边缘收坡用于展示，原始分析数据不变。Three.js 已放在项目中，日常使用不需要联网加载图形库。
 
 100 / 400 / 1600 是整局复盘每个局面的搜索次数预设，并非棋力等级，也未针对所有硬件优化。自动分析采用上述稳定条件和上限。稳定判断只是计算资源控制的启发式，不能证明推荐点正确；关键失误由相邻局面目差变化估算。
 
 关闭网页后，本地服务仍可能运行。右上角「退出引擎」保存原谱并结束服务。
+
+## 给 Lizzie 加上 3D 形势
+
+这是 GTP 外接式联动扩展，使用原来的 KataGo 进程，无需修改 Lizzie 源码。先关闭 LizzieYzy，再运行：
+
+```powershell
+python install_lizzie_terrain.py "C:\LizzieYzy\config.txt" --default
+```
+
+重开后使用「KataGo · 3D 形势」引擎，浏览器会自动打开联动窗口。原引擎条目保留，配置另有备份。原版 Lizzie 可手动把同一扩展加在引擎命令前；配置方式、兼容范围与恢复方法见 [联动扩展说明](docs/lizzie-terrain.md)。
 
 ## 自定义引擎与模型
 
@@ -85,9 +100,10 @@ backups/                   旧格式迁移备份（Git 忽略）
 ## 开发与检查
 
 ```powershell
-python -m unittest test_review -v
+python -m unittest test_review test_lizzie_terrain -v
 node --check web/app.js
 node test_auto_analysis.cjs
+node test_terrain.cjs
 python setup_engine.py --verify-only
 ```
 

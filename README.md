@@ -60,7 +60,9 @@ python setup_engine.py --engine-zip "C:\Downloads\katago-v1.18.1-opencl-windows-
 
 ## 给 Lizzie 加上 3D 形势
 
-这是 GTP 外接式联动扩展，使用原来的 KataGo 进程，无需修改 Lizzie 源码。先关闭 LizzieYzy，再运行：
+联动扩展现已独立为 **[Lizzie Terrain](https://github.com/dengtingyu/lizzie-terrain)**，提供真实截图、独立安装器和测试。后续安装与更新推荐使用独立仓库。
+
+这是 GTP 外接式联动扩展，使用原来的 KataGo 进程，无需修改 Lizzie 源码。当前仓库也保留初版入口，先关闭 LizzieYzy，再运行：
 
 ```powershell
 python install_lizzie_terrain.py "C:\LizzieYzy\config.txt" --default

@@ -1,5 +1,7 @@
 # Lizzie / LizzieYzy 的 3D 形势联动扩展
 
+独立项目已发布：[Lizzie Terrain](https://github.com/dengtingyu/lizzie-terrain)。推荐从独立仓库安装与更新，以下保留弈镜内初版入口的使用说明。
+
 这是 **GTP 外接式扩展**：放在 GUI 与原来的 KataGo 之间，在浏览器窗口显示当前局面的三维归属地形。不是往 Lizzie 安装目录里复制一个 JAR 的原生插件，也不修改 Lizzie 源码。它与 GUI 共用一个 KataGo 进程，不启动第二套分析。支持 `kata-analyze` 的其他 GTP 客户端也可手动接入。
 
 ## 已有 LizzieYzy：自动配置
